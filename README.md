@@ -10,6 +10,23 @@ A deliberately small full-stack implementation of the supplied loyalty-program a
 - Bearer-token authentication with JWT; passwords hashed with bcrypt
 - Multer local file storage (5 MB maximum; JPG, PNG, WEBP, and PDF)
 
+## Docker Compose quick start
+
+Docker Compose is the recommended container workflow for this assessment. It starts PostgreSQL, applies the schema, creates or updates the administrator, and then starts the application.
+
+```bash
+cp .env.example .env
+# Replace JWT_SECRET, ADMIN_PASSWORD, and POSTGRES_PASSWORD before starting.
+docker compose up --build -d
+docker compose ps
+```
+
+Open `http://localhost:3000` (or the `APP_PORT` configured in `.env`). View logs with `docker compose logs -f app` and stop the stack with `docker compose down`. PostgreSQL data and uploaded receipts remain in named volumes. To deliberately erase both, use `docker compose down --volumes`.
+
+The application image uses a multi-stage build, contains only production dependencies at runtime, runs as a non-root user, and includes a health check. Compose waits for PostgreSQL to become healthy and for the one-shot schema/admin setup service to finish before starting the app.
+
+Docker Swarm is intentionally not included. It would add deployment complexity without helping this single-instance assessment, and the accepted local receipt storage is not safe to replicate across Swarm nodes. A real multi-node deployment should first move receipts to object storage and PostgreSQL to a managed/external service, then use orchestrator secrets and rolling-update policies.
+
 ## Setup
 
 Prerequisites: Node.js 20+, npm, and PostgreSQL 14+.
