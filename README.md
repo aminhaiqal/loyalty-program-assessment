@@ -10,6 +10,29 @@ A deliberately small full-stack implementation of the supplied loyalty-program a
 - Bearer-token authentication with JWT; passwords hashed with bcrypt
 - Multer local file storage (5 MB maximum; JPG, PNG, WEBP, and PDF)
 
+## Docker Compose quick start
+
+Docker Compose is the recommended container workflow for this assessment. It starts PostgreSQL, applies the schema, creates or updates the administrator, and then starts the application.
+
+```bash
+cp .env.example .env
+# Replace JWT_SECRET, ADMIN_PASSWORD, and POSTGRES_PASSWORD before starting.
+docker compose up --build -d
+docker compose ps
+```
+
+Open `http://localhost:3000` (or the `APP_PORT` configured in `.env`). View logs with `docker compose logs -f app` and stop the stack with `docker compose down`. PostgreSQL data and uploaded receipts remain in named volumes. To deliberately erase both, use `docker compose down --volumes`.
+
+For the temporary `memora_vps` deployment, layer `compose.vps.yaml` over the base file. It attaches only the application container to the existing `memora_public` proxy network under the `antlysis-loyalty-app` alias; PostgreSQL remains on the private Compose network.
+
+```bash
+docker compose -f compose.yaml -f compose.vps.yaml up --build -d
+```
+
+The application image uses a multi-stage build, contains only production dependencies at runtime, runs as a non-root user, and includes a health check. Compose waits for PostgreSQL to become healthy and for the one-shot schema/admin setup service to finish before starting the app.
+
+Docker Swarm is intentionally not included. It would add deployment complexity without helping this single-instance assessment, and the accepted local receipt storage is not safe to replicate across Swarm nodes. A real multi-node deployment should first move receipts to object storage and PostgreSQL to a managed/external service, then use orchestrator secrets and rolling-update policies.
+
 ## Setup
 
 Prerequisites: Node.js 20+, npm, and PostgreSQL 14+.
@@ -54,6 +77,19 @@ npm run build
 ```
 
 The tests cover receipt input validation and the critical approval transaction: approve creates one voucher, repeated approval is rejected, rejection creates none, and missing/invalid decisions are controlled errors. The database schema also enforces unique voucher source receipts and unique order IDs per member.
+
+## CI/CD and versioning
+
+Pull requests to `main` run the test suite, production web build, and Compose validation. Pushes to `main` also publish an immutable `ghcr.io/aminhaiqal/loyalty-program-assessment:sha-<commit>` image and deploy that exact image to `memora_vps`. The deployment waits for container health, verifies the reported version and commit, and rolls back to the previous image if verification fails.
+
+Normal `main` builds use versions such as `1.0.0-dev.42`. SemVer tags publish version aliases and a GitHub release:
+
+```bash
+npm version patch # or minor / major
+git push origin main --follow-tags
+```
+
+The current version and short commit are visible in the interface. The full deployment identity is also returned by `GET /api/health`.
 
 ## Architecture and decisions
 

@@ -1,0 +1,12 @@
+services:
+  app:
+    networks:
+      default:
+      memora_public:
+        aliases:
+          - antlysis-loyalty-app
+
+networks:
+  memora_public:
+    external: true
+    name: memora_public

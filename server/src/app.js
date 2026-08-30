@@ -20,7 +20,11 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: "same-site" } }));
 app.use(cors({ origin: config.clientOrigin }));
 app.use(express.json({ limit: "100kb" }));
 
-app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
+app.get("/api/health", (_req, res) => res.json({
+  status: "ok",
+  version: config.appVersion,
+  commit: config.appCommitSha
+}));
 app.use("/api/auth", authRouter);
 app.use("/api/user", authenticate, userRouter);
 app.use("/api/receipts", authenticate, receiptsRouter);
