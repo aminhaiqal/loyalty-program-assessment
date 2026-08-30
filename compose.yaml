@@ -6,6 +6,8 @@ x-app-environment: &app-environment
   UPLOAD_DIR: /app/uploads
   ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
   ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+  APP_VERSION: ${APP_VERSION:-dev}
+  APP_COMMIT_SHA: ${APP_COMMIT_SHA:-local}
 
 services:
   db:
@@ -25,7 +27,7 @@ services:
     restart: unless-stopped
 
   app-init:
-    image: loyalty-program:local
+    image: ${APP_IMAGE:-loyalty-program:local}
     command:
       - sh
       - -c
@@ -40,13 +42,16 @@ services:
     restart: "no"
 
   app:
-    image: loyalty-program:local
+    image: ${APP_IMAGE:-loyalty-program:local}
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
+        APP_COMMIT_SHA: ${APP_COMMIT_SHA:-local}
     environment: *app-environment
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
     volumes:
       - receipt_uploads:/app/uploads
     depends_on:

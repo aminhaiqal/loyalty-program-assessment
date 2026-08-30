@@ -17,6 +17,8 @@ export function getConfig() {
     jwtSecret,
     port: Number(process.env.PORT || 3000),
     clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
-    uploadsDir: path.resolve(process.env.UPLOAD_DIR || "uploads")
+    uploadsDir: path.resolve(process.env.UPLOAD_DIR || "uploads"),
+    appVersion: process.env.APP_VERSION || "dev",
+    appCommitSha: process.env.APP_COMMIT_SHA || "local"
   };
 }

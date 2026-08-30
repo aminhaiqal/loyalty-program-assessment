@@ -13,6 +13,19 @@ import {
 import { api, downloadReceipt } from "./api.js";
 import { useAuth } from "./AuthContext.jsx";
 
+const appVersion = import.meta.env.VITE_APP_VERSION || "dev";
+const appCommitSha = import.meta.env.VITE_APP_COMMIT_SHA || "local";
+
+function BuildStamp() {
+  const versionLabel = appVersion === "dev" ? "development" : `v${appVersion}`;
+  const commitLabel = appCommitSha === "local" ? null : appCommitSha.slice(0, 7);
+  return (
+    <span className="build-stamp" title={`Build ${appVersion} · commit ${appCommitSha}`}>
+      {versionLabel}{commitLabel ? ` · ${commitLabel}` : ""}
+    </span>
+  );
+}
+
 function Loading() {
   return <div className="center-message">Loading…</div>;
 }
@@ -99,6 +112,7 @@ function AuthPage({ mode }) {
           {isRegister ? "Already have an account? " : "New here? "}
           <Link to={isRegister ? "/login" : "/register"}>{isRegister ? "Log in" : "Create an account"}</Link>
         </p>
+        <BuildStamp />
       </section>
     </main>
   );
@@ -139,6 +153,7 @@ function Shell({ admin = false }) {
           <span>{user.name || user.email || user.phone}</span>
           <button className="button-link" onClick={signOut}>Log out</button>
         </div>
+        <BuildStamp />
       </header>
       <main className="main-content"><Outlet /></main>
     </div>
