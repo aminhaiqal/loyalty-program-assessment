@@ -38,7 +38,7 @@ docker compose ps
 
 Open `http://localhost:3000` (or the `APP_PORT` configured in `.env`). View logs with `docker compose logs -f app` and stop the stack with `docker compose down`. PostgreSQL data and uploaded receipts remain in named volumes. To deliberately erase both, use `docker compose down --volumes`.
 
-For the temporary `memora_vps` deployment, layer `compose.vps.yaml` over the base file. It attaches only the application container to the existing `memora_public` proxy network under the `antlysis-loyalty-app` alias; PostgreSQL remains on the private Compose network.
+For the temporary VPS deployment, layer `compose.vps.yaml` over the base file. It attaches only the application container to the existing `memora_public` proxy network under the `antlysis-loyalty-app` alias; PostgreSQL remains on the private Compose network.
 
 ```bash
 docker compose -f compose.yaml -f compose.vps.yaml up --build -d
@@ -122,7 +122,7 @@ The tests cover receipt input validation and the critical approval transaction: 
 
 ## CI/CD and versioning
 
-Pull requests to `main` run the test suite, production web build, and Compose validation. Pushes to `main` also publish an immutable `ghcr.io/aminhaiqal/loyalty-program-assessment:sha-<commit>` image and deploy that exact image to `memora_vps`. The deployment waits for container health, verifies the reported version and commit, and rolls back to the previous image if verification fails.
+Pull requests to `main` run the test suite, production web build, and Compose validation. Pushes to `main` also publish an immutable `ghcr.io/aminhaiqal/loyalty-program-assessment:sha-<commit>` image and deploy that exact image to the VPS. The deployment waits for container health, verifies the reported version and commit, and rolls back to the previous image if verification fails.
 
 Normal `main` builds use versions such as `1.0.0-dev.42`. SemVer tags publish version aliases and a GitHub release:
 

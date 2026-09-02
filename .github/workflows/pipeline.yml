@@ -110,7 +110,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    name: Deploy to memora_vps
+    name: Deploy to VPS
     if: github.event_name != 'pull_request'
     needs: publish
     runs-on: ubuntu-latest
