@@ -12,7 +12,22 @@ A deliberately small full-stack implementation of the supplied loyalty-program a
 
 ## Docker Compose quick start
 
-Docker Compose is the recommended container workflow for this assessment. It starts PostgreSQL, applies the schema, creates or updates the administrator, and then starts the application.
+Docker Compose is the recommended container workflow for this assessment. The repository Makefile wraps the complete local workflow, creates `.env` with generated local secrets when it is missing, and waits for every service to become healthy.
+
+```bash
+make
+```
+
+Open `http://localhost:3000`. To retrieve the generated local administrator login, inspect service status, follow logs, or stop the stack without deleting data:
+
+```bash
+make credentials
+make ps
+make logs
+make down
+```
+
+Run `make help` to list every supported command. The equivalent raw Docker Compose workflow is:
 
 ```bash
 cp .env.example .env
@@ -28,6 +43,8 @@ For the temporary `memora_vps` deployment, layer `compose.vps.yaml` over the bas
 ```bash
 docker compose -f compose.yaml -f compose.vps.yaml up --build -d
 ```
+
+The deployed assessment is available at [https://antlysis-loyalty.axelyn.com](https://antlysis-loyalty.axelyn.com). Public traffic is served over HTTPS through Cloudflare and the existing Caddy reverse proxy on `vps`; plain HTTP is redirected to HTTPS. TLS terminates at the proxy layer, while the Node.js application remains on the Docker network and PostgreSQL remains private.
 
 The application image uses a multi-stage build, contains only production dependencies at runtime, runs as a non-root user, and includes a health check. Compose waits for PostgreSQL to become healthy and for the one-shot schema/admin setup service to finish before starting the app.
 
@@ -69,11 +86,36 @@ Prerequisites: Node.js 20+, npm, and PostgreSQL 14+.
 
 For a production-style local run, use `npm run build && npm start`, then open `http://localhost:3000`.
 
+## Database setup, schema, and seed
+
+The authoritative PostgreSQL schema is [`server/db/schema.sql`](server/db/schema.sql). The schema runner reads `DATABASE_URL` from `.env` and applies that file, while the administrator seed reads `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
+
+For a manual local setup:
+
+```bash
+createdb loyalty_program
+cp .env.example .env
+# Set DATABASE_URL, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, and other required values.
+npm run db:schema
+npm run seed:admin
+```
+
+`npm run db:schema` can be run repeatedly: the schema uses guarded type creation, `CREATE TABLE IF NOT EXISTS`, and `CREATE INDEX IF NOT EXISTS`. This small assessment uses that idempotent schema bootstrap instead of a versioned migration framework, so it does not provide migration history or automatic rollback. A production system should introduce ordered migrations before making incremental schema changes.
+
+`npm run seed:admin` creates the administrator when `ADMIN_EMAIL` is absent, or updates the matching account's role and bcrypt password hash when it already exists. It never stores the configured password as plaintext.
+
+Docker Compose performs both steps automatically through the one-shot `app-init` service before starting the application. To rerun the schema and administrator setup against an existing Docker database:
+
+```bash
+make db-setup
+# Equivalent: docker compose run --rm app-init
+```
+
 ## Tests
 
 ```bash
-npm test
-npm run build
+make verify
+# Equivalent: npm test && npm run build
 ```
 
 The tests cover receipt input validation and the critical approval transaction: approve creates one voucher, repeated approval is rejected, rejection creates none, and missing/invalid decisions are controlled errors. The database schema also enforces unique voucher source receipts and unique order IDs per member.
@@ -133,4 +175,8 @@ Except for registration/login, pass `Authorization: Bearer <token>`. Receipt sub
 
 ## AI assistance
 
-AI assistance was used to interpret the assessment, scaffold the implementation, review edge cases, and create tests/documentation. The design decisions and resulting code should be reviewed and understood by the submitter before the follow-up interview.
+Estimated contribution: **60% my contribution and 40% AI-assisted work**.
+
+AI was used as a development assistant to break down the assessment requirements, scaffold and refine parts of the implementation, identify edge cases, propose automated tests, and help prepare the README, UAT material, Docker configuration, Makefile, and CI/CD workflow.
+
+My contribution was to write the technical brief, define the product behaviour and priorities, choose and direct the user experience, review and refine the generated work, configure the deployment and domain, execute the UAT scenarios, verify the security and business rules, and make the final engineering decisions. I have reviewed the resulting code and remain responsible for understanding, maintaining, and explaining the implementation.
