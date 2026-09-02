@@ -64,7 +64,6 @@ const appCommitSha = import.meta.env.VITE_APP_COMMIT_SHA || "local";
 
 const memberLinks = [
   { to: "/app", label: "Overview", icon: LayoutDashboard, end: true },
-  { to: "/app/upload", label: "Upload receipt", icon: Upload },
   { to: "/app/receipts", label: "Receipt history", icon: ReceiptText },
   { to: "/app/vouchers", label: "Vouchers", icon: TicketCheck },
   { to: "/app/settings", label: "Settings", icon: Settings }
@@ -539,6 +538,13 @@ const statusIcons = {
   REJECTED: XCircle
 };
 
+const receiptFilters = [
+  { value: "ALL", label: "All", marker: "bg-slate-400", count: "border-slate-200 bg-slate-50 text-slate-700" },
+  { value: "PENDING", label: "Pending", marker: "bg-amber-500", count: "border-amber-200 bg-amber-50 text-amber-800" },
+  { value: "APPROVED", label: "Approved", marker: "bg-emerald-500", count: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+  { value: "REJECTED", label: "Rejected", marker: "bg-red-500", count: "border-red-200 bg-red-50 text-red-800" }
+];
+
 function Status({ value }) {
   const Icon = statusIcons[value] || CircleAlert;
   return (
@@ -557,11 +563,54 @@ function Empty({ icon: Icon = ReceiptText, children }) {
   );
 }
 
+function ReceiptFilters({ active, counts, onChange }) {
+  return (
+    <section className="mb-4" aria-label="Receipt status summary">
+      <div className="grid grid-cols-2 gap-px border bg-border sm:grid-cols-4" role="group" aria-label="Filter receipts by status">
+        {receiptFilters.map((filter) => {
+          const selected = active === filter.value;
+          return (
+            <button
+              key={filter.value}
+              type="button"
+              aria-pressed={selected}
+              aria-controls="receipt-history-results"
+              onClick={() => onChange(filter.value)}
+              className={cn(
+                "relative flex min-h-14 items-center justify-between gap-4 bg-white px-4 py-3 text-left text-sm font-medium transition-colors focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px]",
+                selected ? "text-foreground" : "text-muted-foreground hover:bg-slate-50 hover:text-foreground",
+                selected && "after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-blue-600"
+              )}
+            >
+              <span className="flex items-center gap-2.5">
+                <span className={cn("size-1.5 rounded-full", filter.marker)} aria-hidden="true" />
+                {filter.label}
+              </span>
+              <span className={cn("min-w-7 rounded-sm border px-1.5 py-0.5 text-center font-mono text-[10px] tabular-nums", filter.count)}>
+                {counts[filter.value]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function ReceiptHistory() {
   const location = useLocation();
   const [receipts, setReceipts] = useState(null);
+  const [filter, setFilter] = useState("ALL");
   const [error, setError] = useState("");
   useEffect(() => { api("/receipts").then((d) => setReceipts(d.receipts)).catch((e) => setError(e.message)); }, []);
+
+  const counts = {
+    ALL: receipts?.length ?? 0,
+    PENDING: receipts?.filter((receipt) => receipt.status === "PENDING").length ?? 0,
+    APPROVED: receipts?.filter((receipt) => receipt.status === "APPROVED").length ?? 0,
+    REJECTED: receipts?.filter((receipt) => receipt.status === "REJECTED").length ?? 0
+  };
+  const visibleReceipts = receipts?.filter((receipt) => filter === "ALL" || receipt.status === filter) ?? [];
 
   async function download(id) {
     setError("");
@@ -577,39 +626,55 @@ function ReceiptHistory() {
         action={<Link className={buttonVariants({ variant: "outline" })} to="/app/upload"><Upload />New receipt</Link>}
       />
       <Notice error={error} success={location.state?.success} />
-      {receipts?.length ? (
-        <div className="border bg-white">
-          <Table>
-            <TableHeader className="bg-slate-50/80">
-              <TableRow>
-                <TableHead>Order</TableHead>
-                <TableHead>Purchase date</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead className="w-16"><span className="sr-only">File</span></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {receipts.map((receipt) => (
-                <TableRow key={receipt.id}>
-                  <TableCell className="font-mono text-xs font-medium">{receipt.orderId}</TableCell>
-                  <TableCell>{formatDate(receipt.purchaseDate)}</TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">{formatAmount(receipt.amount)}</TableCell>
-                  <TableCell>
-                    <Status value={receipt.status} />
-                    {receipt.rejectionReason && <span className="mt-2 block max-w-52 text-xs leading-5 text-red-700">{receipt.rejectionReason}</span>}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{formatDate(receipt.submittedAt)}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon-sm" onClick={() => download(receipt.id)} aria-label={`Download receipt for ${receipt.orderId}`}><Download /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : receipts ? <Empty>No receipts yet. Upload a purchase record to start the review process.</Empty> : !error && <Loading />}
+      {receipts ? (
+        <>
+          <ReceiptFilters active={filter} counts={counts} onChange={setFilter} />
+          <p className="sr-only" aria-live="polite">
+            {visibleReceipts.length} {filter === "ALL" ? "total" : filter.toLowerCase()} {visibleReceipts.length === 1 ? "receipt" : "receipts"}.
+          </p>
+          <div id="receipt-history-results">
+            {visibleReceipts.length ? (
+              <div className="border bg-white">
+                <Table>
+                  <TableHeader className="bg-slate-50/80">
+                    <TableRow>
+                      <TableHead>Order</TableHead>
+                      <TableHead>Purchase date</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Submitted</TableHead>
+                      <TableHead className="w-16"><span className="sr-only">File</span></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleReceipts.map((receipt) => (
+                      <TableRow key={receipt.id}>
+                        <TableCell className="font-mono text-xs font-medium">{receipt.orderId}</TableCell>
+                        <TableCell>{formatDate(receipt.purchaseDate)}</TableCell>
+                        <TableCell className="text-right font-mono tabular-nums">{formatAmount(receipt.amount)}</TableCell>
+                        <TableCell>
+                          <Status value={receipt.status} />
+                          {receipt.rejectionReason && <span className="mt-2 block max-w-52 text-xs leading-5 text-red-700">{receipt.rejectionReason}</span>}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{formatDate(receipt.submittedAt)}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon-sm" onClick={() => download(receipt.id)} aria-label={`Download receipt for ${receipt.orderId}`}><Download /></Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <Empty>
+                {filter === "ALL"
+                  ? "No receipts yet. Add a purchase record to start the review process."
+                  : `No ${filter.toLowerCase()} receipts.`}
+              </Empty>
+            )}
+          </div>
+        </>
+      ) : !error && <Loading />}
     </>
   );
 }
