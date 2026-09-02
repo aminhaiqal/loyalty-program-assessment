@@ -52,7 +52,7 @@ Docker Swarm is intentionally not included. It would add deployment complexity w
 
 ## Setup
 
-Prerequisites: Node.js 20+, npm, and PostgreSQL 14+.
+Prerequisites: Node.js `^20.19.0` or `>=22.12.0` (Node.js 24 recommended), npm, and PostgreSQL 14+.
 
 1. Install packages:
 
