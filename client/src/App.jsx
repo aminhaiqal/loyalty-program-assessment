@@ -377,7 +377,7 @@ function Shell({ admin = false }) {
 
 function PageHeader({ kicker, title, description, action }) {
   return (
-    <header className="mb-8 flex flex-col gap-5 border-b pb-7 sm:flex-row sm:items-end sm:justify-between">
+    <header className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <p className="mb-2 font-mono text-[10px] font-medium uppercase tracking-[0.15em] text-primary">{kicker}</p>
         <h1 className="text-3xl font-semibold tracking-[-0.035em] text-foreground sm:text-[2.15rem]">{title}</h1>
