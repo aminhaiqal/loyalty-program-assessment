@@ -1,0 +1,2817 @@
+{
+  "info": {
+    "_postman_id": "e0cd184c-7664-4fbf-80d0-e174d66d212c",
+    "name": "Antlysis - Loyalty Program",
+    "description": "Import-ready API acceptance suite for the Proof / Perk loyalty application.\n\nRun folders in numeric order. The first request generates unique synthetic users and order IDs. Request tests retain member/admin tokens, receipt IDs, and voucher identifiers as collection variables.\n\nThe environment must provide base_url, admin_email, and admin_password. Never commit a populated production password or bearer token.\n\nReceipt upload requests reference postman/fixtures/receipt-sample.pdf. In the Postman desktop application, select that fixture again if Postman asks for local file permission.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "member_password",
+      "value": "PostmanMember123!",
+      "type": "string"
+    },
+    {
+      "key": "run_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "member_email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "other_member_email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "phone_member_phone",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "member_phone",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "purchase_date",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "approval_order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "rejection_order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "other_order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "invalid_order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "member_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "other_member_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "member_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "other_member_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "approval_receipt_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "rejection_receipt_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "other_member_receipt_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "voucher_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "voucher_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "missing_uuid",
+      "value": "00000000-0000-4000-8000-000000000001",
+      "type": "string"
+    },
+    {
+      "key": "rejection_reason",
+      "value": "Purchase information could not be verified.",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Run Setup",
+      "description": "Initialize unique test data and confirm the target build is healthy.",
+      "item": [
+        {
+          "name": "Initialize Run and Health Check",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  const runId = `${Date.now()}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`.slice(-14);",
+                  "  const phoneSuffix = runId.slice(-8);",
+                  "  const yesterday = new Date(Date.now() - 86400000);",
+                  "  const purchaseDate = [yesterday.getFullYear(), String(yesterday.getMonth() + 1).padStart(2, '0'), String(yesterday.getDate()).padStart(2, '0')].join('-');",
+                  "  pm.collectionVariables.set('run_id', runId);",
+                  "  pm.collectionVariables.set('member_email', `postman.member.a.${runId}@example.com`);",
+                  "  pm.collectionVariables.set('other_member_email', `postman.member.b.${runId}@example.com`);",
+                  "  pm.collectionVariables.set('phone_member_phone', `+6011${phoneSuffix}`);",
+                  "  pm.collectionVariables.set('member_phone', `+6012${phoneSuffix}`);",
+                  "  pm.collectionVariables.set('purchase_date', purchaseDate);",
+                  "  pm.collectionVariables.set('approval_order_id', `PM-APP-${runId}`);",
+                  "  pm.collectionVariables.set('rejection_order_id', `PM-REJ-${runId}`);",
+                  "  pm.collectionVariables.set('other_order_id', `PM-OTH-${runId}`);",
+                  "  pm.collectionVariables.set('invalid_order_id', `PM-INV-${runId}`);",
+                  "  ['member_token','other_member_token','admin_token','member_id','other_member_id','approval_receipt_id','rejection_receipt_id','other_member_receipt_id','voucher_id','voucher_code'].forEach((key) => pm.collectionVariables.unset(key));",
+                  "}());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Service is healthy\", function () { pm.expect(data.status).to.eql(\"ok\"); });",
+                  "  pm.test(\"Build identity is present\", function () { pm.expect(data.version).to.be.a(\"string\").and.not.empty; pm.expect(data.commit).to.be.a(\"string\").and.not.empty; });",
+                  "  console.log(`Postman run ${pm.collectionVariables.get('run_id')} targeting ${pm.variables.get('base_url')}`);",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/api/health",
+            "description": "Start every full collection run here. This request resets generated variables but never touches environment secrets."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01 - Authentication",
+      "description": "Create isolated test users and exercise positive and negative authentication paths.",
+      "item": [
+        {
+          "name": "Register Member A - Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Member account is returned\", function () { pm.expect(data.user.role).to.eql(\"USER\"); pm.expect(data.user.email).to.eql(pm.collectionVariables.get('member_email')); });",
+                  "  pm.test(\"Sensitive password fields are absent\", function () { pm.expect(data.user).to.not.have.property(\"password\"); pm.expect(data.user).to.not.have.property(\"password_hash\"); });",
+                  "  pm.test(\"Bearer token is returned\", function () { pm.expect(data.token).to.be.a(\"string\").and.not.empty; });",
+                  "  pm.collectionVariables.set('member_token', data.token);",
+                  "  pm.collectionVariables.set('member_id', data.user.id);",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Member A\",\n  \"email\": \"{{member_email}}\",\n  \"password\": \"{{member_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/auth/register"
+          },
+          "response": []
+        },
+        {
+          "name": "Register Member B - Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Second member is isolated\", function () { pm.expect(data.user.id).to.not.eql(pm.collectionVariables.get('member_id')); pm.expect(data.user.role).to.eql(\"USER\"); });",
+                  "  pm.collectionVariables.set('other_member_token', data.token);",
+                  "  pm.collectionVariables.set('other_member_id', data.user.id);",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Member B\",\n  \"email\": \"{{other_member_email}}\",\n  \"password\": \"{{member_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/auth/register"
+          },
+          "response": []
+        },
+        {
+          "name": "Register Phone-only Member",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Phone-only registration succeeds\", function () { pm.expect(data.user.phone).to.eql(pm.collectionVariables.get('phone_member_phone')); pm.expect(data.user.email).to.be.null; });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Phone Member\",\n  \"phone\": \"{{phone_member_phone}}\",\n  \"password\": \"{{member_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/auth/register"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Duplicate Email Registration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is DUPLICATE_VALUE\", function () { pm.expect(data.error.code).to.eql(\"DUPLICATE_VALUE\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate\",\n  \"email\": \"{{member_email}}\",\n  \"password\": \"{{member_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/auth/register"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Registration Without Contact",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is VALIDATION_ERROR\", function () { pm.expect(data.error.code).to.eql(\"VALIDATION_ERROR\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Missing Contact\",\n  \"password\": \"{{member_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/auth/register"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Invalid Email Registration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is VALIDATION_ERROR\", function () { pm.expect(data.error.code).to.eql(\"VALIDATION_ERROR\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"not-an-email\",\n  \"password\": \"{{member_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/auth/register"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Short Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is VALIDATION_ERROR\", function () { pm.expect(data.error.code).to.eql(\"VALIDATION_ERROR\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"short.{{run_id}}@example.com\",\n  \"password\": \"short\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/auth/register"
+          },
+          "response": []
+        },
+        {
+          "name": "Login Member A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Member login returns USER role\", function () { pm.expect(data.user.role).to.eql(\"USER\"); });",
+                  "  pm.collectionVariables.set('member_token', data.token);",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"{{member_email}}\",\n  \"password\": \"{{member_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/auth/login"
+          },
+          "response": []
+        },
+        {
+          "name": "Login Member B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.collectionVariables.set('other_member_token', data.token);",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"{{other_member_email}}\",\n  \"password\": \"{{member_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/auth/login"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Invalid Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is INVALID_CREDENTIALS\", function () { pm.expect(data.error.code).to.eql(\"INVALID_CREDENTIALS\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"{{member_email}}\",\n  \"password\": \"WrongPassword123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/auth/login"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Member Profile and Dashboard",
+      "description": "Verify member profile behavior before receipt data changes the dashboard.",
+      "item": [
+        {
+          "name": "Get Member A Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Profile belongs to Member A\", function () { pm.expect(data.user.id).to.eql(pm.collectionVariables.get('member_id')); pm.expect(data.user.role).to.eql(\"USER\"); });",
+                  "  pm.test(\"Password hash is never exposed\", function () { pm.expect(data.user).to.not.have.property(\"password_hash\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/user/profile"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Member A Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Profile changes persist\", function () { pm.expect(data.user.name).to.eql(\"Postman Member A Updated\"); pm.expect(data.user.phone).to.eql(pm.collectionVariables.get('member_phone')); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Member A Updated\",\n  \"email\": \"{{member_email}}\",\n  \"phone\": \"{{member_phone}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/user/profile"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Profile Without Contact",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is VALIDATION_ERROR\", function () { pm.expect(data.error.code).to.eql(\"VALIDATION_ERROR\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"\",\n  \"phone\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/user/profile"
+          },
+          "response": []
+        },
+        {
+          "name": "Initial Member Dashboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"New member starts with zero activity\", function () { pm.expect(data.pendingReceipts).to.eql(0); pm.expect(data.approvedReceipts).to.eql(0); pm.expect(data.availableVouchers).to.eql(0); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/user/dashboard"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - Receipt Submission",
+      "description": "Create two Member A receipts for approval/rejection and one Member B receipt for ownership tests.",
+      "item": [
+        {
+          "name": "Upload Approval Receipt - Member A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"New receipt is pending\", function () { pm.expect(data.receipt.status).to.eql(\"PENDING\"); pm.expect(data.receipt.orderId).to.eql(pm.collectionVariables.get('approval_order_id')); });",
+                  "  pm.collectionVariables.set('approval_receipt_id', data.receipt.id);",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "orderId",
+                  "type": "text",
+                  "value": "{{approval_order_id}}"
+                },
+                {
+                  "key": "purchaseDate",
+                  "type": "text",
+                  "value": "{{purchase_date}}"
+                },
+                {
+                  "key": "amount",
+                  "type": "text",
+                  "value": "42.50"
+                },
+                {
+                  "key": "receipt",
+                  "type": "file",
+                  "src": "postman/fixtures/receipt-sample.pdf",
+                  "contentType": "application/pdf"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts"
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Rejection Receipt - Member A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Second receipt is pending\", function () { pm.expect(data.receipt.status).to.eql(\"PENDING\"); });",
+                  "  pm.collectionVariables.set('rejection_receipt_id', data.receipt.id);",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "orderId",
+                  "type": "text",
+                  "value": "{{rejection_order_id}}"
+                },
+                {
+                  "key": "purchaseDate",
+                  "type": "text",
+                  "value": "{{purchase_date}}"
+                },
+                {
+                  "key": "amount",
+                  "type": "text",
+                  "value": "18.75"
+                },
+                {
+                  "key": "receipt",
+                  "type": "file",
+                  "src": "postman/fixtures/receipt-sample.pdf",
+                  "contentType": "application/pdf"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts"
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Receipt - Member B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "  const data = pm.response.json();",
+                  "  pm.collectionVariables.set('other_member_receipt_id', data.receipt.id);",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{other_member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "orderId",
+                  "type": "text",
+                  "value": "{{other_order_id}}"
+                },
+                {
+                  "key": "purchaseDate",
+                  "type": "text",
+                  "value": "{{purchase_date}}"
+                },
+                {
+                  "key": "amount",
+                  "type": "text",
+                  "value": "31.20"
+                },
+                {
+                  "key": "receipt",
+                  "type": "file",
+                  "src": "postman/fixtures/receipt-sample.pdf",
+                  "contentType": "application/pdf"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Duplicate Order ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is DUPLICATE_ORDER\", function () { pm.expect(data.error.code).to.eql(\"DUPLICATE_ORDER\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "orderId",
+                  "type": "text",
+                  "value": "{{approval_order_id}}"
+                },
+                {
+                  "key": "purchaseDate",
+                  "type": "text",
+                  "value": "{{purchase_date}}"
+                },
+                {
+                  "key": "amount",
+                  "type": "text",
+                  "value": "42.50"
+                },
+                {
+                  "key": "receipt",
+                  "type": "file",
+                  "src": "postman/fixtures/receipt-sample.pdf",
+                  "contentType": "application/pdf"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Invalid Amount",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is VALIDATION_ERROR\", function () { pm.expect(data.error.code).to.eql(\"VALIDATION_ERROR\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "orderId",
+                  "type": "text",
+                  "value": "{{invalid_order_id}}"
+                },
+                {
+                  "key": "purchaseDate",
+                  "type": "text",
+                  "value": "{{purchase_date}}"
+                },
+                {
+                  "key": "amount",
+                  "type": "text",
+                  "value": "0.00"
+                },
+                {
+                  "key": "receipt",
+                  "type": "file",
+                  "src": "postman/fixtures/receipt-sample.pdf",
+                  "contentType": "application/pdf"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Missing Receipt File",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is VALIDATION_ERROR\", function () { pm.expect(data.error.code).to.eql(\"VALIDATION_ERROR\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "orderId",
+                  "type": "text",
+                  "value": "PM-NOFILE-{{run_id}}"
+                },
+                {
+                  "key": "purchaseDate",
+                  "type": "text",
+                  "value": "{{purchase_date}}"
+                },
+                {
+                  "key": "amount",
+                  "type": "text",
+                  "value": "12.00"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Unsupported File Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is INVALID_FILE\", function () { pm.expect(data.error.code).to.eql(\"INVALID_FILE\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "orderId",
+                  "type": "text",
+                  "value": "{{invalid_order_id}}"
+                },
+                {
+                  "key": "purchaseDate",
+                  "type": "text",
+                  "value": "{{purchase_date}}"
+                },
+                {
+                  "key": "amount",
+                  "type": "text",
+                  "value": "12.00"
+                },
+                {
+                  "key": "receipt",
+                  "type": "file",
+                  "src": "postman/fixtures/unsupported-receipt.txt",
+                  "contentType": "text/plain"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 - Receipt History and Ownership",
+      "description": "Verify member-scoped data and protected evidence retrieval.",
+      "item": [
+        {
+          "name": "List Member A Receipts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  const ids = data.receipts.map((receipt) => receipt.id);",
+                  "  pm.test(\"Member A sees both own receipts\", function () { pm.expect(ids).to.include(pm.collectionVariables.get('approval_receipt_id')); pm.expect(ids).to.include(pm.collectionVariables.get('rejection_receipt_id')); });",
+                  "  pm.test(\"Member A cannot see Member B receipt\", function () { pm.expect(ids).to.not.include(pm.collectionVariables.get('other_member_receipt_id')); });",
+                  "  pm.test(\"Own receipts remain pending\", function () { pm.expect(data.receipts.every((receipt) => receipt.status === 'PENDING')).to.be.true; });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts"
+          },
+          "response": []
+        },
+        {
+          "name": "Download Own Receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  pm.test(\"Download metadata is present\", function () { pm.expect(pm.response.headers.has('Content-Disposition')).to.be.true; pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf'); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts/{{approval_receipt_id}}/file"
+          },
+          "response": []
+        },
+        {
+          "name": "Forbid Member B From Member A Receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is FORBIDDEN\", function () { pm.expect(data.error.code).to.eql(\"FORBIDDEN\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{other_member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts/{{approval_receipt_id}}/file"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Invalid Receipt ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is VALIDATION_ERROR\", function () { pm.expect(data.error.code).to.eql(\"VALIDATION_ERROR\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts/not-a-uuid/file"
+          },
+          "response": []
+        },
+        {
+          "name": "Return Not Found for Missing Receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is NOT_FOUND\", function () { pm.expect(data.error.code).to.eql(\"NOT_FOUND\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts/{{missing_uuid}}/file"
+          },
+          "response": []
+        },
+        {
+          "name": "Initial Member Vouchers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Pending receipts create no vouchers\", function () { pm.expect(data.vouchers).to.be.an('array').that.is.empty; });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/user/vouchers"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 - Admin Authentication and Queue",
+      "description": "Authenticate the configured administrator and inspect pending evidence.",
+      "item": [
+        {
+          "name": "Login Administrator",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  if (!pm.environment.get('admin_email') || !pm.environment.get('admin_password')) { throw new Error('Set admin_email and admin_password in the selected Postman environment.'); }",
+                  "}());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Administrator role is returned\", function () { pm.expect(data.user.role).to.eql(\"ADMIN\"); });",
+                  "  pm.collectionVariables.set('admin_token', data.token);",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/auth/login"
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Dashboard Before Decisions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Dashboard counters are numeric\", function () { ['pendingReceipts','approvedReceipts','rejectedReceipts','vouchersIssued'].forEach((key) => pm.expect(data[key]).to.be.a('number')); });",
+                  "  pm.test(\"Created receipts are counted as pending\", function () { pm.expect(data.pendingReceipts).to.be.at.least(3); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/admin/dashboard"
+          },
+          "response": []
+        },
+        {
+          "name": "Forbid Member From Admin Dashboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is FORBIDDEN\", function () { pm.expect(data.error.code).to.eql(\"FORBIDDEN\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/admin/dashboard"
+          },
+          "response": []
+        },
+        {
+          "name": "List Pending Receipt Queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  const ids = data.receipts.map((receipt) => receipt.id);",
+                  "  pm.test(\"All generated pending receipts are visible\", function () { ['approval_receipt_id','rejection_receipt_id','other_member_receipt_id'].forEach((key) => pm.expect(ids).to.include(pm.collectionVariables.get(key))); });",
+                  "  pm.test(\"Queue includes member and evidence metadata\", function () { const receipt = data.receipts.find((row) => row.id === pm.collectionVariables.get('approval_receipt_id')); pm.expect(receipt.fileName).to.be.a('string').and.not.empty; pm.expect(receipt.userEmail).to.eql(pm.collectionVariables.get('member_email')); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/admin/receipts?status=PENDING"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Approval Receipt Detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Correct pending receipt is returned\", function () { pm.expect(data.receipt.id).to.eql(pm.collectionVariables.get('approval_receipt_id')); pm.expect(data.receipt.status).to.eql('PENDING'); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/admin/receipts/{{approval_receipt_id}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Download Receipt as Administrator",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts/{{approval_receipt_id}}/file"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Invalid Queue Filter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is VALIDATION_ERROR\", function () { pm.expect(data.error.code).to.eql(\"VALIDATION_ERROR\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/admin/receipts?status=UNKNOWN"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 - Receipt Decisions",
+      "description": "Exercise the one-way decision state machine and one-voucher invariant.",
+      "item": [
+        {
+          "name": "Approve Pending Receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Receipt becomes approved\", function () { pm.expect(data.receipt.status).to.eql('APPROVED'); pm.expect(data.receipt.processedAt).to.be.a('string').and.not.empty; pm.expect(data.receipt.rejectionReason).to.be.null; });",
+                  "  pm.test(\"Exactly one voucher is returned\", function () { pm.expect(data.voucher.receiptId).to.eql(pm.collectionVariables.get('approval_receipt_id')); pm.expect(data.voucher.code).to.match(/^VCH-[A-F0-9]{24}$/); });",
+                  "  pm.collectionVariables.set('voucher_id', data.voucher.id);",
+                  "  pm.collectionVariables.set('voucher_code', data.voucher.code);",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"APPROVE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/admin/receipts/{{approval_receipt_id}}/decision"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Repeated Approval",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is ALREADY_PROCESSED\", function () { pm.expect(data.error.code).to.eql(\"ALREADY_PROCESSED\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"APPROVE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/admin/receipts/{{approval_receipt_id}}/decision"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Pending Receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Receipt becomes rejected\", function () { pm.expect(data.receipt.status).to.eql('REJECTED'); pm.expect(data.receipt.rejectionReason).to.eql(pm.collectionVariables.get('rejection_reason')); });",
+                  "  pm.test(\"Rejection creates no voucher\", function () { pm.expect(data.voucher).to.be.null; });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"REJECT\",\n  \"rejectionReason\": \"{{rejection_reason}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/admin/receipts/{{rejection_receipt_id}}/decision"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Repeated Rejection",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is ALREADY_PROCESSED\", function () { pm.expect(data.error.code).to.eql(\"ALREADY_PROCESSED\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"REJECT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/admin/receipts/{{rejection_receipt_id}}/decision"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Unsupported Decision",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is VALIDATION_ERROR\", function () { pm.expect(data.error.code).to.eql(\"VALIDATION_ERROR\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"HOLD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/admin/receipts/{{other_member_receipt_id}}/decision"
+          },
+          "response": []
+        },
+        {
+          "name": "Return Not Found for Missing Decision Target",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is NOT_FOUND\", function () { pm.expect(data.error.code).to.eql(\"NOT_FOUND\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"APPROVE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/admin/receipts/{{missing_uuid}}/decision"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07 - Post-decision Verification",
+      "description": "Confirm member/admin views reflect the recorded decisions and voucher.",
+      "item": [
+        {
+          "name": "Member Dashboard After Decisions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Member totals reflect one approval and one rejection\", function () { pm.expect(data.pendingReceipts).to.eql(0); pm.expect(data.approvedReceipts).to.eql(1); pm.expect(data.availableVouchers).to.eql(1); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/user/dashboard"
+          },
+          "response": []
+        },
+        {
+          "name": "Member Receipt History After Decisions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  const approved = data.receipts.find((receipt) => receipt.id === pm.collectionVariables.get('approval_receipt_id'));",
+                  "  const rejected = data.receipts.find((receipt) => receipt.id === pm.collectionVariables.get('rejection_receipt_id'));",
+                  "  pm.test(\"Receipt statuses are final\", function () { pm.expect(approved.status).to.eql('APPROVED'); pm.expect(rejected.status).to.eql('REJECTED'); pm.expect(rejected.rejectionReason).to.eql(pm.collectionVariables.get('rejection_reason')); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/receipts"
+          },
+          "response": []
+        },
+        {
+          "name": "Member Voucher After Approval",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Exactly one voucher exists\", function () { pm.expect(data.vouchers).to.have.length(1); });",
+                  "  pm.test(\"Voucher traces to the source receipt\", function () { const voucher = data.vouchers[0]; pm.expect(voucher.id).to.eql(pm.collectionVariables.get('voucher_id')); pm.expect(voucher.code).to.eql(pm.collectionVariables.get('voucher_code')); pm.expect(voucher.receiptId).to.eql(pm.collectionVariables.get('approval_receipt_id')); pm.expect(voucher.orderId).to.eql(pm.collectionVariables.get('approval_order_id')); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/user/vouchers"
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Dashboard After Decisions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Program totals include the generated outcomes\", function () { pm.expect(data.pendingReceipts).to.be.at.least(1); pm.expect(data.approvedReceipts).to.be.at.least(1); pm.expect(data.rejectedReceipts).to.be.at.least(1); pm.expect(data.vouchersIssued).to.be.at.least(1); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/admin/dashboard"
+          },
+          "response": []
+        },
+        {
+          "name": "Approved Queue Contains Receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Approved filter includes generated receipt\", function () { pm.expect(data.receipts.map((receipt) => receipt.id)).to.include(pm.collectionVariables.get('approval_receipt_id')); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/admin/receipts?status=APPROVED"
+          },
+          "response": []
+        },
+        {
+          "name": "Rejected Queue Contains Receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Rejected filter includes generated receipt\", function () { pm.expect(data.receipts.map((receipt) => receipt.id)).to.include(pm.collectionVariables.get('rejection_receipt_id')); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/admin/receipts?status=REJECTED"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "08 - Security and Error Responses",
+      "description": "Verify unauthenticated access, malformed input, injection resistance, and controlled errors.",
+      "item": [
+        {
+          "name": "Reject Profile Without Authentication",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is UNAUTHENTICATED\", function () { pm.expect(data.error.code).to.eql(\"UNAUTHENTICATED\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/api/user/profile"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Invalid Bearer Token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.collectionVariables.set('invalid_token', 'not-a-valid-jwt');",
+                  "}());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is UNAUTHENTICATED\", function () { pm.expect(data.error.code).to.eql(\"UNAUTHENTICATED\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{invalid_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/user/profile"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject SQL Injection Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is INVALID_CREDENTIALS\", function () { pm.expect(data.error.code).to.eql(\"INVALID_CREDENTIALS\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"' OR 1=1 --\",\n  \"password\": \"anything\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/auth/login"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Malformed JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is VALIDATION_ERROR\", function () { pm.expect(data.error.code).to.eql(\"VALIDATION_ERROR\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"identifier\":",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/auth/login"
+          },
+          "response": []
+        },
+        {
+          "name": "Return Not Found for Unknown API Route",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Error code is NOT_FOUND\", function () { pm.expect(data.error.code).to.eql(\"NOT_FOUND\"); });",
+                  "  pm.test(\"Error response is controlled\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; pm.expect(data).to.not.have.property(\"stack\"); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/api/does-not-exist"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout Member",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "(function () {",
+                  "  pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });",
+                  "}());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{member_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/auth/logout",
+            "description": "JWT logout is intentionally client-side. This endpoint provides the conventional 204 API target; the client removes its token."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
