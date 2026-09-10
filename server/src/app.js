@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import cors from "cors";
 import express from "express";
-import helmet from "helmet";
 import multer from "multer";
 import { getConfig } from "./config.js";
 import { AppError } from "./errors.js";
@@ -11,12 +10,13 @@ import { adminRouter } from "./routes/admin.js";
 import { authRouter } from "./routes/auth.js";
 import { receiptsRouter } from "./routes/receipts.js";
 import { userRouter } from "./routes/user.js";
+import { securityHeaders } from "./security.js";
 
 const config = getConfig();
 export const app = express();
 
 app.disable("x-powered-by");
-app.use(helmet({ crossOriginResourcePolicy: { policy: "same-site" } }));
+app.use(securityHeaders(config.clientOrigin));
 app.use(cors({ origin: config.clientOrigin }));
 app.use(express.json({ limit: "100kb" }));
 
